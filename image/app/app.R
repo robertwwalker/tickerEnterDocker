@@ -25,6 +25,7 @@ ui <- fluidPage(theme = bs_theme(bootswatch = "superhero",
                     textInput(inputId = "ticker",
                               label = "Ticker",
                               value = "F"),
+                    submitButton("Update View", icon("refresh"))
                   ),
                   
                   # Main panel for displaying outputs ----
