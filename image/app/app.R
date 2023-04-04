@@ -4,6 +4,7 @@ library(tidyquant)
 library(plotly)
 library(bslib)
 library(thematic)
+library(webshot2)
 options(scipen=6)
 
 # Define UI for dataset viewer app ----
@@ -25,7 +26,9 @@ ui <- fluidPage(theme = bs_theme(bootswatch = "superhero",
                     textInput(inputId = "ticker",
                               label = "Ticker",
                               value = "F"),
-                    submitButton("Update View", icon("refresh"))
+                    submitButton("Update View", icon("refresh")),
+                    h3(textOutput("caption2")),
+                    plotlyOutput("ts_plot", height="500px")
                   ),
                   
                   # Main panel for displaying outputs ----
@@ -36,7 +39,8 @@ ui <- fluidPage(theme = bs_theme(bootswatch = "superhero",
                     
                     # Output: Verbatim text for data summary ----
                     verbatimTextOutput("summary"),
-                    plotlyOutput("main_plot", height="500px")
+                    plotlyOutput("main_plot", height="500px"),
+                    imageOutput("frame")
                   )
                 )
 )
@@ -45,32 +49,44 @@ ui <- fluidPage(theme = bs_theme(bootswatch = "superhero",
 server <- function(input, output) {
   thematic_shiny()
 # Collect the data for the S&P 500
-  DatG <- tq_get("^GSPC", from="2017-10-01", to="2022-11-01") |>
+  DatG <- tq_get("^GSPC", from="2018-04-01", to="2023-04-01") |>
     tq_transmute(mutate_fun = monthlyReturn)
   names(DatG) <- c("date","SandP500")
   output$caption <- renderText({
     input$ticker
   })
+  output$caption2 <- renderText({
+    paste0("Time Series Plot: ",input$ticker, sep="")
+  })
 # Generate the regression result
   output$summary <- renderPrint({
-    Data <- tq_get(c(input$ticker), from="2017-10-01", to="2022-11-01") |>
+    Data <- tq_get(c(input$ticker), from="2018-04-01", to="2023-04-01") |>
       tq_transmute(mutate_fun = monthlyReturn) |> 
       left_join(DatG) |> 
-      filter(date > as.Date("2017-11-01"))
+      filter(date > as.Date("2018-04-01"))
     res <- lm(monthly.returns~SandP500, data=Data)
     summary(res)
   })
   
 # Generate the plotly with renderPlotly
   output$main_plot <- renderPlotly({
-    Data <- tq_get(c(input$ticker), from="2017-10-01", to="2022-11-01") |>
+    Data <- tq_get(c(input$ticker), from="2018-04-01", to="2023-04-01") |>
       tq_transmute(mutate_fun = monthlyReturn) |> 
       left_join(DatG) |> 
-      filter(date > as.Date("2017-11-01"))
+      filter(date > as.Date("2018-04-01"))
     df <- data.frame(tit=paste0("CAPM: ",input$ticker, sep=""))
     ggplot(Data,
            aes(x=SandP500, y=monthly.returns)) + geom_point() + geom_smooth(method="lm") + labs(title=df$tit, x="S&P 500 Monthly Returns", y=input$ticker)
   })
+  output$ts_plot <- renderPlotly({
+    Data <- tq_get(c(input$ticker), from="2018-04-01", to="2023-04-01") |>
+      plot_ly(type = 'scatter', mode = 'lines') |>
+      add_trace(x = ~date, y = ~adjusted, fill = 'tozeroy', color = I("steelblue"), name = input$ticker) |>
+      layout(showlegend = F, yaxis = list(title = 'Adjusted Closing Price'))
+  })
+  output$frame <- renderImage({
+    webshot2::webshot(url=paste0("https://www.cnbc.com/quotes/",input$ticker, sep=""))
+    list(src = "webshot.png")}, deleteFile = TRUE)
 }
 
 # Create Shiny app ----
