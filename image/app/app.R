@@ -4,7 +4,6 @@ library(tidyquant)
 library(plotly)
 library(bslib)
 library(thematic)
-library(webshot2)
 options(scipen=6)
 
 # Define UI for dataset viewer app ----
@@ -39,8 +38,7 @@ ui <- fluidPage(theme = bs_theme(bootswatch = "superhero",
                     
                     # Output: Verbatim text for data summary ----
                     verbatimTextOutput("summary"),
-                    plotlyOutput("main_plot", height="500px"),
-                    imageOutput("frame")
+                    plotlyOutput("main_plot", height="500px")
                   )
                 )
 )
@@ -84,9 +82,6 @@ server <- function(input, output) {
       add_trace(x = ~date, y = ~adjusted, fill = 'tozeroy', color = I("steelblue"), name = input$ticker) |>
       layout(showlegend = F, yaxis = list(title = 'Adjusted Closing Price'))
   })
-  output$frame <- renderImage({
-    webshot2::webshot(url=paste0("https://www.cnbc.com/quotes/",input$ticker, sep=""))
-    list(src = "webshot.png")}, deleteFile = TRUE)
 }
 
 # Create Shiny app ----
